@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Lumina Decor 🌱</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      background: #f4f6f8;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    header {
+      background: linear-gradient(135deg, #4db6ac, #2e7d74);
+      color: white;
+      text-align: center;
+      padding: 25px;
+    }
+    main {
+      display: flex;
+      flex: 1;
+    }
+    .producto-grande {
+      flex: 3;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+      padding: 20px;
+      text-align: center;
+      width: 100%;
+      max-width: 800px;
+    }
+    .imagen360 {
+      width: 100%;
+      height: 500px;
+      object-fit: contain;
+      border-radius: 10px;
+      cursor: grab;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+    .imagen360:active { cursor: grabbing; }
+    button {
+      background: #4db6ac;
+      color: white;
+      border: none;
+      padding: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover { background: #3a9c92; }
+    #carrito {
+      flex: 1;
+      background: white;
+      padding: 20px;
+      border-left: 2px solid #ddd;
+    }
+    .eliminar {
+      background: red;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    footer {
+      text-align: center;
+      padding: 15px;
+      background: #eee;
+      margin-top: auto;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Lumina Decor 🌱</h1>
+  <p>Decoración del hogar con vista 360°</p>
+</header>
+
+<main>
+  <div class="producto-grande">
+    <div class="card">
+      <img src="img/sillon1.png" class="imagen360" id="img1">
+      <h3>Sillón moderno</h3>
+      <p>$1299</p>
+      <button onclick="agregarAlCarrito()">Agregar</button>
+    </div>
+  </div>
+
+  <aside id="carrito">
+    <h2>🛒 Carrito</h2>
+    <ul id="lista-carrito"></ul>
+    <p id="total">Total: $0</p>
+    <button onclick="vaciarCarrito()">Vaciar carrito</button>
+    <input type="text" id="nombre" placeholder="Tu nombre">
+    <input type="email" id="correo" placeholder="Tu correo">
+    <button onclick="finalizarCompra()">Generar código</button>
+    <input type="text" id="codigoIngresado" placeholder="Ingresa tu código">
+    <button onclick="verificarCodigo()">Confirmar compra</button>
+  </aside>
+</main>
+
+<footer>
+  <p>© 2026 Lumina Decor</p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+<script>
+  (function(){ emailjs.init("TU_USER_ID"); })();
+
+  const producto = {id:1,nombre:"Sillón moderno",precio:1299};
+
+  // Organizar imágenes en filas según tus vistas
+  const imagenes = [
+    ["sillon1.png","sillon2.png"], // fila 0: aéreas
+    ["sillon3.png","sillon4.png","sillon5.png","sillon6.png","sillon7.png","sillon8.png","sillon9.png","sillon10.png"], // fila 1: laterales
+    ["sillon11.png","sillon12.png"] // fila 2: inferiores
+  ];
+
+  const img = document.getElementById("img1");
+  let fila = 1; // empieza en la fila central (laterales)
+  let col = 0;
+  let dragging = false, startX=0, startY=0;
+
+  function update(){
+    img.src = "img/"+imagenes[fila][col];
+  }
+
+  function mover(x,y){
+    if(!dragging) return;
+    let diffX = x - startX;
+    let diffY = y - startY;
+    let sensX = 30, sensY = 40;
+
+    // Horizontal → columnas
+    if(Math.abs(diffX) > sensX){
+      if(diffX > 0) col = (col-1+imagenes[fila].length)%imagenes[fila].length;
+      else col = (col+1)%imagenes[fila].length;
+      startX = x;
+      update();
+    }
+
+    // Vertical → filas
+    if(Math.abs(diffY) > sensY){
+      if(diffY > 0 && fila>0){ fila--; startY=y; col=0; update(); }
+      else if(diffY < 0 && fila<imagenes.length-1){ fila++; startY=y; col=0; update(); }
+    }
+  }
+
+  img.onmousedown = e => { dragging=true; startX=e.clientX; startY=e.clientY; };
+  window.onmousemove = e => mover(e.clientX,e.clientY);
+  window.onmouseup = ()=> dragging=false;
+
+  img.ontouchstart = e => { dragging=true; startX=e.touches[0].clientX; startY=e.touches[0].clientY; };
+  img.ontouchmove = e => mover(e.touches[0].clientX,e.touches[0].clientY);
+  window.ontouchend = ()=> dragging=false;
+
+  // carrito
+  let carrito = [], codigoGenerado=null;
+  function agregarAlCarrito(){ carrito.push(producto); renderCarrito(); alert("Producto agregado 🛒"); }
+  function eliminarDelCarrito(i){ carrito.splice(i,1); renderCarrito(); }
+  function vaciarCarrito(){ carrito=[]; renderCarrito(); }
+  function renderCarrito(){
+    const lista=document.getElementById("lista-carrito"); lista.innerHTML=""; let total=0;
+    carrito.forEach((p,i)=>{ const li=document.createElement("li"); li.innerHTML=`${p.nombre} - $${p.precio} <button class="eliminar" onclick="eliminarDelCarrito(${i})">X</button>`; lista.appendChild(li); total+=p.precio; });
+    document.getElementById("total").textContent="Total: $"+total;
+  }
+
+  function finalizarCompra(){
+    const nombre=document.getElementById("nombre").value;
+    const correo=document.getElementById("correo").value;
+    if(!nombre||!correo){ alert("Completa los datos"); return; }
+    codigoGenerado=Math.floor(100000+Math.random()*900000);
+    emailjs.send("service_xxxxx","template_codigo",{codigo:codigoGenerado,user_name:nombre,user_email:correo});
+    alert("Código enviado al correo 📩");
+  }
+</script>
+</body>
+</html>
